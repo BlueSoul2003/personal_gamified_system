@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+@theme {
+    --font-heading: 'Fira Code', monospace;
+    --font-body: 'Noto Sans SC', 'Inter', sans-serif;
+
+    --color-bg-dark: #050508;
+    --color-panel-bg: rgba(20, 15, 35, 0.6);
+    --color-panel-border: rgba(100, 50, 255, 0.3);
+    --color-neon-cyan: #00f3ff;
+    --color-neon-purple: #b026ff;
+    --color-text-main: #e2e8f0;
+    --color-text-muted: #94a3b8;
+    --color-gold: #fbbf24;
+}
+
+/* ═══════ BASE ═══════ */
+body {
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    background-image:
+        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.1), transparent 25%);
+    background-attachment: fixed;
+}
+
+/* ═══════ SCROLLBAR ═══════ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-panel-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neon-purple);
+}
+
+/* ═══════ GLASS PANEL ═══════ */
+.glass-panel {
+    background: var(--color-panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-panel-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+    border-color: rgba(0, 243, 255, 0.35);
+    box-shadow: 0 0 25px rgba(0, 243, 255, 0.08);
+}
+
+/* ═══════ NEON TEXT ═══════ */
+.neon-text-cyan {
+    color: var(--color-neon-cyan);
+    text-shadow: 0 0 5px rgba(0, 243, 255, 0.5), 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.neon-text-purple {
+    color: var(--color-neon-purple);
+    text-shadow: 0 0 5px rgba(176, 38, 255, 0.5), 0 0 10px rgba(176, 38, 255, 0.3);
+}
+
+/* ═══════ PROGRESS BARS ═══════ */
+.xp-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-neon-purple), var(--color-neon-cyan));
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 12px var(--color-neon-cyan);
+}
+
+.eng-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #059669, #34d399);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.attr-track {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.attr-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+}
+
+/* ═══════ QUEST CHECKBOX ═══════ */
+.quest-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-neon-purple);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.quest-checkbox:checked {
+    background: var(--color-neon-cyan);
+    border-color: var(--color-neon-cyan);
+    box-shadow: 0 0 12px var(--color-neon-cyan);
+}
+
+.quest-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    color: #000;
+    font-weight: bold;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* ═══════ GRIMOIRE CARDS ═══════ */
+.grimoire-card {
+    background: linear-gradient(145deg, rgba(30, 20, 50, 0.8), rgba(15, 10, 25, 0.8));
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--color-text-main);
+}
+
+.grimoire-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, transparent, transparent, var(--color-neon-cyan));
+    animation: rotate 4s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.grimoire-card::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: rgba(20, 15, 35, 0.95);
+    border-radius: inherit;
+    z-index: 1;
+}
+
+.grimoire-card:hover::before {
+    opacity: 1;
+}
+
+.grimoire-card>* {
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ═══════ LEVEL UP MODAL ═══════ */
+.level-up-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.level-up-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
