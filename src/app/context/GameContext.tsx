@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { supabase } from "../lib/supabase";
 
 // ═══════ TYPES ═══════
 export interface Quest {
@@ -17,8 +18,8 @@ export interface GrimoireItem {
     id: string;
     title: string;
     description: string;
-    icon: string; // lucide icon name
-    color: string; // tailwind color class
+    icon: string;
+    color: string;
     href: string;
 }
 
@@ -47,6 +48,7 @@ interface GameContextType {
     levelUpPending: boolean;
     newLevel: number;
     dismissLevelUp: () => void;
+    syncStatus: "local" | "syncing" | "synced" | "error";
 }
 
 // ═══════ RANK SYSTEM ═══════
@@ -95,6 +97,65 @@ const DEFAULT_STATE: PlayerState = {
     sessionLog: [],
 };
 
+const PLAYER_ID = "default_player";
+
+// ═══════ SUPABASE HELPERS ═══════
+function isSupabaseConfigured(): boolean {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    return !!(url && key && !url.includes("your-project") && !key.includes("your-anon"));
+}
+
+async function loadFromSupabase(): Promise<PlayerState | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+        const { data, error } = await supabase
+            .from("player_state")
+            .select("*")
+            .eq("id", PLAYER_ID)
+            .single();
+        if (error || !data) return null;
+        return {
+            level: data.level,
+            currentXP: data.current_xp,
+            maxXP: data.max_xp,
+            gold: data.gold,
+            totalXP: data.total_xp,
+            energy: data.energy,
+            maxEnergy: data.max_energy,
+            quests: data.quests || DEFAULT_QUESTS,
+            grimoire: data.grimoire || DEFAULT_GRIMOIRE,
+            sessionLog: [],
+        };
+    } catch {
+        return null;
+    }
+}
+
+async function saveToSupabase(state: PlayerState): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+        const { error } = await supabase
+            .from("player_state")
+            .upsert({
+                id: PLAYER_ID,
+                level: state.level,
+                current_xp: state.currentXP,
+                max_xp: state.maxXP,
+                gold: state.gold,
+                total_xp: state.totalXP,
+                energy: state.energy,
+                max_energy: state.maxEnergy,
+                quests: state.quests,
+                grimoire: state.grimoire,
+                updated_at: new Date().toISOString(),
+            });
+        return !error;
+    } catch {
+        return false;
+    }
+}
+
 // ═══════ CONTEXT ═══════
 const GameContext = createContext<GameContextType | null>(null);
 
@@ -110,24 +171,82 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const [hydrated, setHydrated] = useState(false);
     const [levelUpPending, setLevelUpPending] = useState(false);
     const [newLevel, setNewLevel] = useState(1);
+    const [syncStatus, setSyncStatus] = useState<"local" | "syncing" | "synced" | "error">("local");
+    const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Load from localStorage on mount
+    // Load state on mount: try Supabase first, fall back to localStorage
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem("quantumNexusState");
-            if (saved) {
-                const parsed = JSON.parse(saved) as Partial<PlayerState>;
-                setState(prev => ({ ...prev, ...parsed }));
+        async function init() {
+            // Try Supabase
+            const cloudState = await loadFromSupabase();
+            if (cloudState) {
+                setState(cloudState);
+                setSyncStatus("synced");
+                setHydrated(true);
+                return;
             }
-        } catch { /* ignore */ }
-        setHydrated(true);
+            // Fall back to localStorage
+            try {
+                const saved = localStorage.getItem("quantumNexusState");
+                if (saved) {
+                    const parsed = JSON.parse(saved) as Partial<PlayerState>;
+                    setState(prev => ({ ...prev, ...parsed }));
+                }
+            } catch { /* ignore */ }
+            setSyncStatus(isSupabaseConfigured() ? "error" : "local");
+            setHydrated(true);
+        }
+        init();
     }, []);
 
-    // Save to localStorage on every state change (after hydration)
+    // Subscribe to real-time changes from Supabase (cross-device sync)
     useEffect(() => {
-        if (hydrated) {
-            localStorage.setItem("quantumNexusState", JSON.stringify(state));
-        }
+        if (!isSupabaseConfigured()) return;
+
+        const channel = supabase
+            .channel("player_state_changes")
+            .on(
+                "postgres_changes",
+                { event: "UPDATE", schema: "public", table: "player_state", filter: `id=eq.${PLAYER_ID}` },
+                (payload) => {
+                    const data = payload.new;
+                    if (!data) return;
+                    setState(prev => ({
+                        ...prev,
+                        level: data.level,
+                        currentXP: data.current_xp,
+                        maxXP: data.max_xp,
+                        gold: data.gold,
+                        totalXP: data.total_xp,
+                        energy: data.energy,
+                        maxEnergy: data.max_energy,
+                        quests: data.quests || prev.quests,
+                        grimoire: data.grimoire || prev.grimoire,
+                    }));
+                    setSyncStatus("synced");
+                }
+            )
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Save to localStorage + Supabase (debounced) on every state change
+    useEffect(() => {
+        if (!hydrated) return;
+
+        // Always save to localStorage immediately
+        localStorage.setItem("quantumNexusState", JSON.stringify(state));
+
+        // Debounce Supabase saves (300ms) to avoid spamming on rapid changes
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(async () => {
+            if (isSupabaseConfigured()) {
+                setSyncStatus("syncing");
+                const ok = await saveToSupabase(state);
+                setSyncStatus(ok ? "synced" : "error");
+            }
+        }, 300);
     }, [state, hydrated]);
 
     const getTimestamp = () => {
@@ -173,11 +292,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             const quest = prev.quests.find(q => q.id === id);
             if (!quest || quest.completed) return prev;
-
-            const updatedQuests = prev.quests.map(q =>
-                q.id === id ? { ...q, completed: true } : q
-            );
-            return { ...prev, quests: updatedQuests };
+            return { ...prev, quests: prev.quests.map(q => q.id === id ? { ...q, completed: true } : q) };
         });
     }, []);
 
@@ -185,13 +300,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             const quest = prev.quests.find(q => q.id === id);
             if (!quest || !quest.completed) return prev;
-
-            const updatedQuests = prev.quests.map(q =>
-                q.id === id ? { ...q, completed: false } : q
-            );
             return {
                 ...prev,
-                quests: updatedQuests,
+                quests: prev.quests.map(q => q.id === id ? { ...q, completed: false } : q),
                 currentXP: Math.max(0, prev.currentXP - quest.xpReward),
                 gold: Math.max(0, prev.gold - quest.goldReward),
             };
@@ -212,24 +323,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setLevelUpPending(false);
     }, []);
 
-    if (!hydrated) {
-        return null; // Prevent SSR mismatch
-    }
+    if (!hydrated) return null;
 
     return (
         <GameContext.Provider
             value={{
-                state,
-                addXP,
-                addGold,
-                completeQuest,
-                uncompleteQuest,
-                addQuest,
-                addGrimoireItem,
-                appendLog,
-                levelUpPending,
-                newLevel,
-                dismissLevelUp,
+                state, addXP, addGold, completeQuest, uncompleteQuest,
+                addQuest, addGrimoireItem, appendLog,
+                levelUpPending, newLevel, dismissLevelUp, syncStatus,
             }}
         >
             {children}

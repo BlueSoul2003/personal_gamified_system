@@ -1,10 +1,19 @@
 "use client";
 
-import { Atom, Crosshair, Star, Zap, Coins } from "lucide-react";
+import { Atom, Crosshair, Star, Zap, Coins, Cloud, CloudOff, Loader2 } from "lucide-react";
 import { useGame, getRank } from "../context/GameContext";
 
+const SYNC_CONFIG = {
+    local: { icon: CloudOff, label: "Local", color: "text-gray-500" },
+    syncing: { icon: Loader2, label: "Syncing...", color: "text-yellow-400" },
+    synced: { icon: Cloud, label: "Cloud", color: "text-emerald-400" },
+    error: { icon: CloudOff, label: "Offline", color: "text-red-400" },
+};
+
 export default function TopStatus() {
-    const { state } = useGame();
+    const { state, syncStatus } = useGame();
+    const sync = SYNC_CONFIG[syncStatus];
+    const SyncIcon = sync.icon;
     const xpPct = Math.max(0, Math.min((state.currentXP / state.maxXP) * 100, 100));
     const engPct = Math.max(0, Math.min((state.energy / state.maxEnergy) * 100, 100));
 
@@ -62,6 +71,12 @@ export default function TopStatus() {
                 <div className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--color-gold)] flex items-center gap-2 bg-[rgba(251,191,36,0.08)] px-4 py-1.5 rounded-[10px] border border-[rgba(251,191,36,0.2)] whitespace-nowrap">
                     <Coins className="w-5 h-5" />
                     {state.gold}G
+                </div>
+
+                {/* Sync Status */}
+                <div className={`flex items-center gap-1.5 text-xs ${sync.color}`}>
+                    <SyncIcon className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
+                    {sync.label}
                 </div>
             </div>
         </header>
