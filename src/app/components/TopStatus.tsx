@@ -1,19 +1,18 @@
 "use client";
 
-import { Atom, Crosshair, Star, Zap, Coins, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { Atom, Crosshair, Star, Zap, Coins } from "lucide-react";
 import { useGame, getRank } from "../context/GameContext";
 
-const SYNC_CONFIG = {
-    local: { icon: CloudOff, label: "Local", color: "text-gray-500" },
-    syncing: { icon: Loader2, label: "Syncing...", color: "text-yellow-400" },
-    synced: { icon: Cloud, label: "Cloud", color: "text-emerald-400" },
-    error: { icon: CloudOff, label: "Offline", color: "text-red-400" },
+const SYNC_DOT: Record<string, { bg: string; shadow: string; title: string }> = {
+    local: { bg: "bg-gray-500", shadow: "", title: "Local only" },
+    syncing: { bg: "bg-yellow-400 animate-pulse", shadow: "shadow-[0_0_6px_rgba(250,204,21,0.8)]", title: "Syncing..." },
+    synced: { bg: "bg-emerald-400", shadow: "shadow-[0_0_6px_rgba(52,211,153,0.6)]", title: "Cloud synced" },
+    error: { bg: "bg-red-400", shadow: "", title: "Sync error" },
 };
 
 export default function TopStatus() {
     const { state, syncStatus } = useGame();
-    const sync = SYNC_CONFIG[syncStatus];
-    const SyncIcon = sync.icon;
+    const dot = SYNC_DOT[syncStatus];
     const xpPct = Math.max(0, Math.min((state.currentXP / state.maxXP) * 100, 100));
     const engPct = Math.max(0, Math.min((state.energy / state.maxEnergy) * 100, 100));
 
@@ -28,6 +27,11 @@ export default function TopStatus() {
                     <div className="absolute -bottom-1.5 -right-2 bg-black border border-[var(--color-neon-purple)] text-[var(--color-neon-purple)] font-[family-name:var(--font-heading)] text-xs font-bold px-2 py-1 rounded-md shadow-[0_0_8px_rgba(176,38,255,0.5)]">
                         Lv.{state.level}
                     </div>
+                    {/* Tiny sync dot — green=synced, yellow pulse=syncing, gray=local, red=error */}
+                    <div
+                        className={`absolute top-0 left-0 w-[7px] h-[7px] rounded-full ${dot.bg} ${dot.shadow} transition-colors duration-500`}
+                        title={dot.title}
+                    />
                 </div>
                 <div>
                     <h1 className="text-2xl font-bold tracking-wider">
@@ -71,12 +75,6 @@ export default function TopStatus() {
                 <div className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--color-gold)] flex items-center gap-2 bg-[rgba(251,191,36,0.08)] px-4 py-1.5 rounded-[10px] border border-[rgba(251,191,36,0.2)] whitespace-nowrap">
                     <Coins className="w-5 h-5" />
                     {state.gold}G
-                </div>
-
-                {/* Sync Status */}
-                <div className={`flex items-center gap-1.5 text-xs ${sync.color}`}>
-                    <SyncIcon className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-                    {sync.label}
                 </div>
             </div>
         </header>
