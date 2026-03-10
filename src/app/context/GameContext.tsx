@@ -123,8 +123,8 @@ async function loadFromSupabase(): Promise<PlayerState | null> {
             totalXP: data.total_xp,
             energy: data.energy,
             maxEnergy: data.max_energy,
-            quests: data.quests || DEFAULT_QUESTS,
-            grimoire: data.grimoire || DEFAULT_GRIMOIRE,
+            quests: (data.quests && data.quests.length > 0) ? data.quests : DEFAULT_QUESTS,
+            grimoire: (data.grimoire && data.grimoire.length > 0) ? data.grimoire : DEFAULT_GRIMOIRE,
             sessionLog: [],
         };
     } catch {
