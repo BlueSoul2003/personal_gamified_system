@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Hexagon, Network, Brain, Boxes, Sparkles, Lock, ChevronDown, ChevronRight } from "lucide-react";
+import { Hexagon, Network, Brain, Boxes, Sparkles, Lock, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { useGame } from "../context/GameContext";
 
 const CORE_SKILLS = [
@@ -30,7 +30,7 @@ const LOCKED_SKILLS = [
 ];
 
 export default function SkillTree() {
-    const { state, addResource, appendLog } = useGame();
+    const { state, addResource, removeResource, appendLog } = useGame();
     const [openIdx, setOpenIdx] = useState<number>(0);
     const [showResourceForm, setShowResourceForm] = useState(false);
     const [newItemName, setNewItemName] = useState("");
@@ -105,8 +105,15 @@ export default function SkillTree() {
                                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-3">{cat}</h4>
                                         <ul className="space-y-1">
                                             {state.resources.filter(r => r.category === cat).map(r => (
-                                                <li key={r.id} className="flex justify-between items-center py-1 pl-4 text-sm text-[var(--color-text-muted)] hover:text-white rounded cursor-default transition-colors">
+                                                <li key={r.id} className="group flex justify-between items-center py-1 pl-4 pr-2 text-sm text-[var(--color-text-muted)] hover:text-white hover:bg-white/[0.03] rounded cursor-default transition-colors">
                                                     <span>{r.name}</span>
+                                                    <button 
+                                                        onClick={() => { removeResource(r.id); appendLog(`🗑️ 删除了实体资源「${r.name}」`); }} 
+                                                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 p-0.5 transition"
+                                                        title="Remove Resource"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
                                                 </li>
                                             ))}
                                         </ul>

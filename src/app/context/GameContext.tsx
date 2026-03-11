@@ -52,6 +52,8 @@ interface GameContextType {
     addQuest: (quest: Omit<Quest, "id" | "completed">) => void;
     addGrimoireItem: (item: Omit<GrimoireItem, "id">) => void;
     addResource: (res: Omit<Resource, "id">) => void;
+    removeGrimoireItem: (id: string) => void;
+    removeResource: (id: string) => void;
     appendLog: (msg: string) => void;
     levelUpPending: boolean;
     newLevel: number;
@@ -137,6 +139,11 @@ function isSupabaseConfigured(): boolean {
     return !!(url && key && !url.includes("your-project") && !key.includes("your-anon"));
 }
 
+function cleanLegacyGrimoire(saved: GrimoireItem[]): GrimoireItem[] {
+    const legacyIds = ["g1", "g2", "g3"];
+    return saved.filter(item => !legacyIds.includes(item.id));
+}
+
 async function loadFromSupabase(): Promise<PlayerState | null> {
     if (!isSupabaseConfigured()) return null;
     try {
@@ -155,7 +162,7 @@ async function loadFromSupabase(): Promise<PlayerState | null> {
             energy: data.energy,
             maxEnergy: data.max_energy,
             quests: (data.quests && data.quests.length > 0) ? data.quests : DEFAULT_QUESTS,
-            grimoire: (data.grimoire && data.grimoire.length > 0) ? mergeGrimoire(data.grimoire, DEFAULT_GRIMOIRE) : DEFAULT_GRIMOIRE,
+            grimoire: (data.grimoire && data.grimoire.length > 0) ? mergeGrimoire(cleanLegacyGrimoire(data.grimoire), DEFAULT_GRIMOIRE) : DEFAULT_GRIMOIRE,
             resources: (data.resources && data.resources.length > 0) ? mergeResources(data.resources, DEFAULT_RESOURCES) : DEFAULT_RESOURCES,
             sessionLog: [],
         };
@@ -224,7 +231,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 if (saved) {
                     const parsed = JSON.parse(saved) as Partial<PlayerState>;
                     if (parsed.grimoire) {
-                        parsed.grimoire = mergeGrimoire(parsed.grimoire, DEFAULT_GRIMOIRE);
+                        parsed.grimoire = mergeGrimoire(cleanLegacyGrimoire(parsed.grimoire), DEFAULT_GRIMOIRE);
                     }
                     if (parsed.resources) {
                         parsed.resources = mergeResources(parsed.resources, DEFAULT_RESOURCES);
@@ -366,6 +373,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, resources: [...prev.resources, newItem] }));
     }, []);
 
+    const removeGrimoireItem = useCallback((id: string) => {
+        setState(prev => ({ ...prev, grimoire: prev.grimoire.filter(item => item.id !== id) }));
+    }, []);
+
+    const removeResource = useCallback((id: string) => {
+        setState(prev => ({ ...prev, resources: prev.resources.filter(res => res.id !== id) }));
+    }, []);
+
     const dismissLevelUp = useCallback(() => {
         setLevelUpPending(false);
     }, []);
@@ -376,7 +391,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         <GameContext.Provider
             value={{
                 state, addXP, addGold, completeQuest, uncompleteQuest,
-                addQuest, addGrimoireItem, addResource, appendLog,
+                addQuest, addGrimoireItem, addResource, removeGrimoireItem, removeResource, appendLog,
                 levelUpPending, newLevel, dismissLevelUp, syncStatus,
             }}
         >

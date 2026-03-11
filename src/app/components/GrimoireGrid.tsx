@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle, Cpu, CircuitBoard, Flame, Book, Globe, FlaskConical, Microscope, Terminal, Video, Camera, Laptop, Rocket } from "lucide-react";
+import { PlusCircle, Cpu, CircuitBoard, Flame, Book, Globe, FlaskConical, Microscope, Terminal, Video, Camera, Laptop, Rocket, Trash2 } from "lucide-react";
 import { useGame, GrimoireItem } from "../context/GameContext";
 
 // Map icon string names to components
@@ -30,7 +30,7 @@ const COLOR_OPTIONS = [
 ];
 
 export default function GrimoireGrid() {
-    const { state, addGrimoireItem, appendLog } = useGame();
+    const { state, addGrimoireItem, removeGrimoireItem, appendLog } = useGame();
     const [showForm, setShowForm] = useState(false);
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
@@ -51,16 +51,25 @@ export default function GrimoireGrid() {
             <p className="text-xs text-gray-400 mb-5">记录你开发的交互式学习模块，点击激活知识矩阵。</p>
             <div className="grid grid-cols-1 gap-4">
                 {state.grimoire.map((item: GrimoireItem) => (
-                    <a key={item.id} href={item.href} className="grimoire-card block p-4 rounded-xl cursor-pointer group">
-                        <div className="flex justify-between items-start mb-2">
-                            <span className={`${item.color} group-hover:animate-pulse`}>
-                                {ICON_MAP[item.icon] || <Cpu className="w-8 h-8" />}
-                            </span>
-                            <span className="text-xs bg-gray-800 text-gray-300 px-2 py-1 rounded font-[family-name:var(--font-heading)] border border-gray-600">HTML</span>
-                        </div>
-                        <h4 className={`font-bold mb-1 group-hover:${item.color.replace("text-", "text-")} transition`}>{item.title}</h4>
-                        <p className="text-xs text-gray-500">{item.description}</p>
-                    </a>
+                    <div key={item.id} className="relative group">
+                        <a href={item.href} className="grimoire-card block p-4 rounded-xl cursor-pointer">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className={`${item.color} group-hover:animate-pulse`}>
+                                    {ICON_MAP[item.icon] || <Cpu className="w-8 h-8" />}
+                                </span>
+                                <span className="text-xs bg-gray-800 text-transparent opacity-0 px-2 py-1 rounded font-[family-name:var(--font-heading)] border border-transparent select-none">HTML</span>
+                            </div>
+                            <h4 className={`font-bold mb-1 group-hover:${item.color.replace("text-", "text-")} transition`}>{item.title}</h4>
+                            <p className="text-xs text-gray-500 w-11/12">{item.description}</p>
+                        </a>
+                        <button 
+                            onClick={(e) => { e.preventDefault(); removeGrimoireItem(item.id); appendLog(`🗑️ 删除了模块「${item.title}」`); }}
+                            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 bg-black/60 rounded-md text-gray-400 hover:text-red-500 hover:bg-black transition z-10"
+                            title="Remove Module"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 ))}
 
                 {/* Add Module */}
