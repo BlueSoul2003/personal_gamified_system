@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle, Cpu, CircuitBoard, Flame } from "lucide-react";
+import { PlusCircle, Cpu, CircuitBoard, Flame, Book, Globe, FlaskConical, Microscope, Terminal, Video, Camera, Laptop, Rocket } from "lucide-react";
 import { useGame, GrimoireItem } from "../context/GameContext";
 
 // Map icon string names to components
@@ -9,9 +9,18 @@ const ICON_MAP: Record<string, React.ReactNode> = {
     Cpu: <Cpu className="w-8 h-8" />,
     CircuitBoard: <CircuitBoard className="w-8 h-8" />,
     Flame: <Flame className="w-8 h-8" />,
+    Book: <Book className="w-8 h-8" />,
+    Globe: <Globe className="w-8 h-8" />,
+    FlaskConical: <FlaskConical className="w-8 h-8" />,
+    Microscope: <Microscope className="w-8 h-8" />,
+    Terminal: <Terminal className="w-8 h-8" />,
+    Video: <Video className="w-8 h-8" />,
+    Camera: <Camera className="w-8 h-8" />,
+    Laptop: <Laptop className="w-8 h-8" />,
+    Rocket: <Rocket className="w-8 h-8" />,
 };
 
-const ICON_OPTIONS = ["Cpu", "CircuitBoard", "Flame"];
+const ICON_OPTIONS = ["Cpu", "CircuitBoard", "Flame", "Book", "Globe", "FlaskConical", "Microscope", "Terminal", "Video", "Camera", "Laptop", "Rocket"];
 const COLOR_OPTIONS = [
     { label: "Cyan", value: "text-[var(--color-neon-cyan)]" },
     { label: "Yellow", value: "text-yellow-400" },

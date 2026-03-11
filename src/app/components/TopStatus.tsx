@@ -56,7 +56,7 @@ export default function TopStatus() {
                     </div>
                     <div className="flex justify-between text-xs text-gray-500">
                         <span>Rank: <span className="text-gray-400">{getRank(state.level)}</span></span>
-                        <span className="text-[var(--color-neon-cyan)]">CGPA 4.0 Stabilized</span>
+                        <span className="text-[var(--color-neon-cyan)]">CGPA 3.9 (Year 3 Sem 1)</span>
                     </div>
                 </div>
 

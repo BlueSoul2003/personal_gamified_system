@@ -14,6 +14,12 @@ export interface Quest {
     completed: boolean;
 }
 
+export interface Resource {
+    id: string;
+    name: string;
+    category: string;
+}
+
 export interface GrimoireItem {
     id: string;
     title: string;
@@ -33,6 +39,7 @@ export interface PlayerState {
     maxEnergy: number;
     quests: Quest[];
     grimoire: GrimoireItem[];
+    resources: Resource[];
     sessionLog: string[];
 }
 
@@ -44,6 +51,7 @@ interface GameContextType {
     uncompleteQuest: (id: string) => void;
     addQuest: (quest: Omit<Quest, "id" | "completed">) => void;
     addGrimoireItem: (item: Omit<GrimoireItem, "id">) => void;
+    addResource: (res: Omit<Resource, "id">) => void;
     appendLog: (msg: string) => void;
     levelUpPending: boolean;
     newLevel: number;
@@ -71,17 +79,18 @@ export function getRank(level: number): string {
 }
 
 // ═══════ DEFAULT DATA ═══════
-const DEFAULT_QUESTS: Quest[] = [
-    { id: "q1", title: "微波源控制器调试", description: "Complete the circuitry and write the firmware for the new controller.", type: "main", xpReward: 500, goldReward: 0, completed: false },
-    { id: "q2", title: "准备辅导材料", description: "Draft notes for this week's physics session.", type: "daily", xpReward: 50, goldReward: 20, completed: false },
-    { id: "q3", title: "Bambu Lab 打印订单", description: "Maintain and start the Bambu Lab print queue.", type: "daily", xpReward: 30, goldReward: 50, completed: false },
-    { id: "q4", title: "YouTube 视频脚本构思", description: "Outline the 10-minute video on basic quantum concepts.", type: "side", xpReward: 150, goldReward: 0, completed: false },
+const DEFAULT_QUESTS: Quest[] = [];
+
+const DEFAULT_RESOURCES: Resource[] = [
+    { id: "r_1", name: "iPad Pro 2022", category: "Hardware" },
+    { id: "r_2", name: "Bambu Lab A1", category: "3D Printing" },
+    { id: "r_3", name: "Lenovo IdeaPad Slim3i", category: "Hardware" },
+    { id: "r_4", name: "DJI Osmo Pocket 3", category: "Audio/Visual" },
+    { id: "r_5", name: "DJI Mini Mic Set", category: "Audio/Visual" },
+    { id: "r_6", name: "FNIRSI 4 in 1 Multimeter", category: "Electronics" },
 ];
 
 const DEFAULT_GRIMOIRE: GrimoireItem[] = [
-    { id: "g1", title: "薛定谔方程可视化", description: "量子力学基础波函数交互式模拟器。", icon: "Cpu", color: "text-[var(--color-neon-cyan)]", href: "#" },
-    { id: "g2", title: "数字逻辑门模拟器", description: "基础电子学 AND/OR/NOT 门电路交互连线测试。", icon: "CircuitBoard", color: "text-yellow-400", href: "#" },
-    { id: "g3", title: "Feynman: Thermodynamics", description: "Interactive study notes on heat transfer principles.", icon: "Flame", color: "text-[var(--color-neon-purple)]", href: "#" },
     { id: "g_qm_ch1", title: "Intro to Quantum Mechanics", description: "Interactive physical regimes, uncertainty, and photoelectric effect.", icon: "Cpu", color: "text-[var(--color-neon-cyan)]", href: "/modules/quantum-mechanics-ch1" },
 ];
 
@@ -95,6 +104,7 @@ const DEFAULT_STATE: PlayerState = {
     maxEnergy: 100,
     quests: DEFAULT_QUESTS,
     grimoire: DEFAULT_GRIMOIRE,
+    resources: DEFAULT_RESOURCES,
     sessionLog: [],
 };
 
@@ -102,6 +112,16 @@ const PLAYER_ID = "default_player";
 
 // ═══════ SUPABASE HELPERS ═══════
 function mergeGrimoire(saved: GrimoireItem[], defaults: GrimoireItem[]): GrimoireItem[] {
+    const merged = [...saved];
+    for (const defItem of defaults) {
+        if (!merged.find(item => item.id === defItem.id)) {
+            merged.push(defItem);
+        }
+    }
+    return merged;
+}
+
+function mergeResources(saved: Resource[], defaults: Resource[]): Resource[] {
     const merged = [...saved];
     for (const defItem of defaults) {
         if (!merged.find(item => item.id === defItem.id)) {
@@ -136,6 +156,7 @@ async function loadFromSupabase(): Promise<PlayerState | null> {
             maxEnergy: data.max_energy,
             quests: (data.quests && data.quests.length > 0) ? data.quests : DEFAULT_QUESTS,
             grimoire: (data.grimoire && data.grimoire.length > 0) ? mergeGrimoire(data.grimoire, DEFAULT_GRIMOIRE) : DEFAULT_GRIMOIRE,
+            resources: (data.resources && data.resources.length > 0) ? mergeResources(data.resources, DEFAULT_RESOURCES) : DEFAULT_RESOURCES,
             sessionLog: [],
         };
     } catch {
@@ -159,6 +180,7 @@ async function saveToSupabase(state: PlayerState): Promise<boolean> {
                 max_energy: state.maxEnergy,
                 quests: state.quests,
                 grimoire: state.grimoire,
+                resources: state.resources,
                 updated_at: new Date().toISOString(),
             });
         return !error;
@@ -204,6 +226,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
                     if (parsed.grimoire) {
                         parsed.grimoire = mergeGrimoire(parsed.grimoire, DEFAULT_GRIMOIRE);
                     }
+                    if (parsed.resources) {
+                        parsed.resources = mergeResources(parsed.resources, DEFAULT_RESOURCES);
+                    } else {
+                        parsed.resources = DEFAULT_RESOURCES;
+                    }
                     setState(prev => ({ ...prev, ...parsed }));
                 }
             } catch { /* ignore */ }
@@ -236,6 +263,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
                         maxEnergy: data.max_energy,
                         quests: data.quests || prev.quests,
                         grimoire: data.grimoire || prev.grimoire,
+                        resources: data.resources || prev.resources,
                     }));
                     setSyncStatus("synced");
                 }
@@ -333,6 +361,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, grimoire: [...prev.grimoire, newItem] }));
     }, []);
 
+    const addResource = useCallback((res: Omit<Resource, "id">) => {
+        const newItem: Resource = { ...res, id: `r_${Date.now()}` };
+        setState(prev => ({ ...prev, resources: [...prev.resources, newItem] }));
+    }, []);
+
     const dismissLevelUp = useCallback(() => {
         setLevelUpPending(false);
     }, []);
@@ -343,7 +376,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         <GameContext.Provider
             value={{
                 state, addXP, addGold, completeQuest, uncompleteQuest,
-                addQuest, addGrimoireItem, appendLog,
+                addQuest, addGrimoireItem, addResource, appendLog,
                 levelUpPending, newLevel, dismissLevelUp, syncStatus,
             }}
         >

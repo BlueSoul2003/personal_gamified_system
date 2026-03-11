@@ -18,6 +18,7 @@ export default function QuestBoard() {
     const [newType, setNewType] = useState<"main" | "daily" | "side">("daily");
     const [newXP, setNewXP] = useState(50);
     const [newGold, setNewGold] = useState(0);
+    const [viewMode, setViewMode] = useState<"active" | "history">("active");
 
     const handleToggle = (id: string, checked: boolean) => {
         const quest = state.quests.find(q => q.id === id);
@@ -42,10 +43,29 @@ export default function QuestBoard() {
     };
 
     const questsByType = (type: "main" | "daily" | "side") =>
-        state.quests.filter(q => q.type === type);
+        state.quests.filter(q => q.type === type && (viewMode === "active" ? !q.completed : q.completed));
 
     return (
         <div className="space-y-6">
+            <div className="flex gap-2 p-1 bg-black/40 rounded-lg w-fit mb-4">
+                <button 
+                    onClick={() => setViewMode("active")} 
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-md transition ${viewMode === "active" ? "bg-[var(--color-neon-cyan)] text-black" : "text-gray-400 hover:text-white"}`}
+                >
+                    Active Quests
+                </button>
+                <button 
+                    onClick={() => setViewMode("history")} 
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-md transition ${viewMode === "history" ? "bg-[var(--color-neon-purple)] text-white" : "text-gray-400 hover:text-white"}`}
+                >
+                    Quest History
+                </button>
+            </div>
+
+            {viewMode === "history" && state.quests.filter(q => q.completed).length === 0 && (
+                <div className="text-center py-8 text-sm text-gray-500 italic">No completed quests yet.</div>
+            )}
+            
             {(["main", "daily", "side"] as const).map(type => {
                 const config = TYPE_CONFIG[type];
                 const quests = questsByType(type);
