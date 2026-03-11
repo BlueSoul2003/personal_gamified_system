@@ -82,6 +82,7 @@ const DEFAULT_GRIMOIRE: GrimoireItem[] = [
     { id: "g1", title: "薛定谔方程可视化", description: "量子力学基础波函数交互式模拟器。", icon: "Cpu", color: "text-[var(--color-neon-cyan)]", href: "#" },
     { id: "g2", title: "数字逻辑门模拟器", description: "基础电子学 AND/OR/NOT 门电路交互连线测试。", icon: "CircuitBoard", color: "text-yellow-400", href: "#" },
     { id: "g3", title: "Feynman: Thermodynamics", description: "Interactive study notes on heat transfer principles.", icon: "Flame", color: "text-[var(--color-neon-purple)]", href: "#" },
+    { id: "g_qm_ch1", title: "Intro to Quantum Mechanics", description: "Interactive physical regimes, uncertainty, and photoelectric effect.", icon: "Cpu", color: "text-[var(--color-neon-cyan)]", href: "/modules/quantum-mechanics-ch1" },
 ];
 
 const DEFAULT_STATE: PlayerState = {
@@ -100,6 +101,16 @@ const DEFAULT_STATE: PlayerState = {
 const PLAYER_ID = "default_player";
 
 // ═══════ SUPABASE HELPERS ═══════
+function mergeGrimoire(saved: GrimoireItem[], defaults: GrimoireItem[]): GrimoireItem[] {
+    const merged = [...saved];
+    for (const defItem of defaults) {
+        if (!merged.find(item => item.id === defItem.id)) {
+            merged.push(defItem);
+        }
+    }
+    return merged;
+}
+
 function isSupabaseConfigured(): boolean {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -124,7 +135,7 @@ async function loadFromSupabase(): Promise<PlayerState | null> {
             energy: data.energy,
             maxEnergy: data.max_energy,
             quests: (data.quests && data.quests.length > 0) ? data.quests : DEFAULT_QUESTS,
-            grimoire: (data.grimoire && data.grimoire.length > 0) ? data.grimoire : DEFAULT_GRIMOIRE,
+            grimoire: (data.grimoire && data.grimoire.length > 0) ? mergeGrimoire(data.grimoire, DEFAULT_GRIMOIRE) : DEFAULT_GRIMOIRE,
             sessionLog: [],
         };
     } catch {
@@ -190,6 +201,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 const saved = localStorage.getItem("quantumNexusState");
                 if (saved) {
                     const parsed = JSON.parse(saved) as Partial<PlayerState>;
+                    if (parsed.grimoire) {
+                        parsed.grimoire = mergeGrimoire(parsed.grimoire, DEFAULT_GRIMOIRE);
+                    }
                     setState(prev => ({ ...prev, ...parsed }));
                 }
             } catch { /* ignore */ }
