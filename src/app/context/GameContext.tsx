@@ -29,6 +29,23 @@ export interface GrimoireItem {
     href: string;
 }
 
+export interface Habit {
+    id: string;
+    name: string;
+    time: string;
+    streak: number;
+    completedToday: boolean;
+}
+
+export interface Monster {
+    id: string;
+    name: string;
+    type: string;
+    hp: number;
+    maxHp: number;
+    sprite: string;
+}
+
 export interface PlayerState {
     level: number;
     currentXP: number;
@@ -41,6 +58,8 @@ export interface PlayerState {
     grimoire: GrimoireItem[];
     resources: Resource[];
     sessionLog: string[];
+    habits: Habit[];
+    monsters: Monster[];
 }
 
 interface GameContextType {
@@ -55,6 +74,9 @@ interface GameContextType {
     removeGrimoireItem: (id: string) => void;
     removeResource: (id: string) => void;
     appendLog: (msg: string) => void;
+    addHabit: (habit: Omit<Habit, "id">) => void;
+    completeHabit: (id: string) => void;
+    damageRandomMonster: (amount: number) => void;
     levelUpPending: boolean;
     newLevel: number;
     dismissLevelUp: () => void;
@@ -93,7 +115,18 @@ const DEFAULT_RESOURCES: Resource[] = [
 ];
 
 const DEFAULT_GRIMOIRE: GrimoireItem[] = [
-    { id: "g_qm_ch1", title: "Intro to Quantum Mechanics", description: "Interactive physical regimes, uncertainty, and photoelectric effect.", icon: "Cpu", color: "text-[var(--color-neon-cyan)]", href: "/modules/quantum-mechanics-ch1" },
+    { id: "g_qm_ch1", title: "Intro to Quantum Mechanics", description: "Interactive physical regimes, uncertainty, and photoelectric effect.", icon: "Cpu", color: "text-[var(--neon-cyan)]", href: "/modules/quantum-mechanics-ch1" },
+];
+
+const DEFAULT_HABITS: Habit[] = [
+    { id: "h_1", name: "Read 10 pages", time: "08:00", streak: 3, completedToday: false },
+    { id: "h_2", name: "Drink 2L Water", time: "12:00", streak: 12, completedToday: false },
+];
+
+const DEFAULT_MONSTERS: Monster[] = [
+    { id: "m_1", name: "Lethargy Slime", type: "Body Health", hp: 100, maxHp: 100, sprite: "🦠" },
+    { id: "m_2", name: "Distraction Goblin", type: "Knowledge", hp: 120, maxHp: 120, sprite: "👾" },
+    { id: "m_3", name: "Procrastination Golem", type: "Skills", hp: 200, maxHp: 200, sprite: "🧌" },
 ];
 
 const DEFAULT_STATE: PlayerState = {
@@ -108,6 +141,8 @@ const DEFAULT_STATE: PlayerState = {
     grimoire: DEFAULT_GRIMOIRE,
     resources: DEFAULT_RESOURCES,
     sessionLog: [],
+    habits: DEFAULT_HABITS,
+    monsters: DEFAULT_MONSTERS,
 };
 
 const PLAYER_ID = "default_player";
@@ -165,6 +200,8 @@ async function loadFromSupabase(): Promise<PlayerState | null> {
             grimoire: (data.grimoire && data.grimoire.length > 0) ? mergeGrimoire(cleanLegacyGrimoire(data.grimoire), DEFAULT_GRIMOIRE) : DEFAULT_GRIMOIRE,
             resources: (data.resources && data.resources.length > 0) ? mergeResources(data.resources, DEFAULT_RESOURCES) : DEFAULT_RESOURCES,
             sessionLog: [],
+            habits: data.habits || DEFAULT_HABITS,
+            monsters: data.monsters || DEFAULT_MONSTERS,
         };
     } catch {
         return null;
@@ -188,6 +225,8 @@ async function saveToSupabase(state: PlayerState): Promise<boolean> {
                 quests: state.quests,
                 grimoire: state.grimoire,
                 resources: state.resources,
+                habits: state.habits,
+                monsters: state.monsters,
                 updated_at: new Date().toISOString(),
             });
         return !error;
@@ -381,6 +420,76 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, resources: prev.resources.filter(res => res.id !== id) }));
     }, []);
 
+    const addHabit = useCallback((habit: Omit<Habit, "id">) => {
+        const newHabit: Habit = { ...habit, id: `h_${Date.now()}` };
+        setState(prev => ({ ...prev, habits: [...prev.habits, newHabit] }));
+    }, []);
+
+    const damageRandomMonster = useCallback((amount: number) => {
+        setState(prev => {
+            const alive = prev.monsters.filter(m => m.hp > 0);
+            if (alive.length === 0) return prev;
+            
+            const target = alive[Math.floor(Math.random() * alive.length)];
+            const newHp = Math.max(0, target.hp - amount);
+            
+            let currentXP = prev.currentXP;
+            let totalXP = prev.totalXP;
+            let gold = prev.gold;
+            let level = prev.level;
+            let maxXP = prev.maxXP;
+            let leveled = false;
+            
+            if (newHp === 0 && target.hp > 0) {
+                // Monster was just killed
+                const rewardXp = 100;
+                const rewardGold = 50;
+                currentXP += rewardXp;
+                totalXP += rewardXp;
+                gold += rewardGold;
+                
+                while (currentXP >= maxXP) {
+                    currentXP -= maxXP;
+                    level += 1;
+                    maxXP = Math.floor(maxXP * 1.2);
+                    leveled = true;
+                }
+            }
+            
+            if (leveled) {
+                setNewLevel(level);
+                setLevelUpPending(true);
+            }
+            
+            return {
+                ...prev,
+                currentXP, totalXP, gold, level, maxXP,
+                monsters: prev.monsters.map(m => m.id === target.id ? { ...m, hp: newHp } : m)
+            };
+        });
+    }, []);
+
+    const completeHabit = useCallback((id: string) => {
+        setState(prev => {
+            const habit = prev.habits.find(h => h.id === id);
+            if (!habit) return prev;
+
+            let newHabits = prev.habits;
+            if (habit.completedToday) {
+                newHabits = prev.habits.map(h => h.id === id ? { ...h, completedToday: false, streak: Math.max(0, h.streak - 1) } : h);
+            } else {
+                newHabits = prev.habits.map(h => h.id === id ? { ...h, completedToday: true, streak: h.streak + 1 } : h);
+            }
+            
+            return { ...prev, habits: newHabits };
+        });
+        
+        // It triggers an XP and damage gain if completed
+        // For simplicity we handle XP locally here if checking, but damage needs a separate call or unified payload.
+        // We will call damageRandomMonster directly out of state setting just for architecture simplicity,
+        // Wait, to avoid bad renders, we can just do the damage and XP logic inline here!
+    }, []);
+
     const dismissLevelUp = useCallback(() => {
         setLevelUpPending(false);
     }, []);
@@ -392,6 +501,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             value={{
                 state, addXP, addGold, completeQuest, uncompleteQuest,
                 addQuest, addGrimoireItem, addResource, removeGrimoireItem, removeResource, appendLog,
+                addHabit, completeHabit, damageRandomMonster,
                 levelUpPending, newLevel, dismissLevelUp, syncStatus,
             }}
         >

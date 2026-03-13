@@ -3,8 +3,26 @@
 import { Activity } from "lucide-react";
 import { useGame } from "../context/GameContext";
 
-export default function SessionLog() {
+interface SessionLogProps {
+    inline?: boolean;
+}
+
+export default function SessionLog({ inline }: SessionLogProps) {
     const { state } = useGame();
+
+    if (inline) {
+        return (
+            <div className="space-y-1.5 text-xs text-[var(--neon-purple)] max-h-36 overflow-y-auto w-full tech-font">
+                {state.sessionLog.length === 0 ? (
+                    <p className="text-gray-600">— 系统初始化完毕 —</p>
+                ) : (
+                    [...state.sessionLog].map((log, i) => (
+                        <p key={i} className="text-gray-300">{log}</p>
+                    ))
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="glass-panel p-5">

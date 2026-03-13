@@ -18,13 +18,13 @@ export default function TopStatus() {
 
     return (
         <header className="w-full glass-panel p-5 mb-6 flex flex-col md:flex-row items-center justify-between gap-5 z-10">
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-6">
                 {/* Avatar */}
-                <div className="relative w-[76px] h-[76px] rounded-full border-2 border-[var(--color-neon-cyan)] p-[3px] flex items-center justify-center shadow-[0_0_15px_rgba(0,243,255,0.4)] shrink-0">
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-900 to-black flex items-center justify-center">
-                        <Atom className="w-10 h-10 text-[var(--color-neon-cyan)] animate-pulse" />
+                <div className="avatar-ring pixel-panel bg-[var(--bg-dark)] w-[100px] h-[100px] border-4 border-white shadow-[4px_4px_0_rgba(0,0,0,0.8)] relative flex items-center justify-center shrink-0">
+                    <div className="avatar-inner w-full h-full overflow-hidden flex items-center justify-center">
+                        <img src="/avatar.png" alt="Player Avatar" className="w-full h-full object-cover" style={{imageRendering: "pixelated"}} />
                     </div>
-                    <div className="absolute -bottom-1.5 -right-2 bg-black border border-[var(--color-neon-purple)] text-[var(--color-neon-purple)] font-[family-name:var(--font-heading)] text-xs font-bold px-2 py-1 rounded-md shadow-[0_0_8px_rgba(176,38,255,0.5)]">
+                    <div className="absolute -bottom-2.5 -right-2.5 bg-black border-2 border-[var(--color-neon-cyan)] text-[var(--color-neon-cyan)] font-[family-name:var(--font-heading)] text-xs font-bold px-2 py-1 shadow-[2px_2px_0_rgba(0,0,0,0.8)] pixel-font">
                         Lv.{state.level}
                     </div>
                     {/* Tiny sync dot — green=synced, yellow pulse=syncing, gray=local, red=error */}
@@ -33,12 +33,12 @@ export default function TopStatus() {
                         title={dot.title}
                     />
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-wider">
-                        代号: <span className="neon-text-cyan">Quantum.Explorer</span>
+                <div className="flex flex-col justify-center">
+                    <h1 className="text-xl md:text-3xl font-bold tracking-wider mb-2">
+                        <span className="pixel-font text-[var(--color-neon-cyan)] text-sm md:text-lg">Gregory</span>
                     </h1>
-                    <p className="text-sm text-gray-400 mt-1 flex items-center gap-2">
-                        <Crosshair className="w-4 h-4" /> 终极目标: MIT Graduate School
+                    <p className="text-xs md:text-sm text-gray-400 flex items-center gap-2">
+                        <Crosshair className="w-4 h-4 text-[#ff3366]" /> 终极目标: MIT Grad School
                     </p>
                 </div>
             </div>
